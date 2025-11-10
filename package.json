@@ -1,0 +1,13 @@
+{
+  "name": "programacao-orientada-objetos-rpg",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "bycontract": "^2.0.11",
+    "prompt-sync": "^4.2.0"
+  }
+}

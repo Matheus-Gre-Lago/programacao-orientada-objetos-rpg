@@ -1,4 +1,4 @@
-import { JogoDemo } from "./JogoDemo.js";
+import { Jogo } from "./Jogo.js";
 
-let jogo = new JogoDemo();
+const jogo = new Jogo();
 jogo.joga();
