@@ -18,11 +18,6 @@ export class PainelEletrico extends Objeto {
             return false;
         }
 
-        // Verifica se a lanterna ainda tem carga (para etapa final)
-        if (!ferramenta.usar()) {
-            return false;
-        }
-
         this.acaoOk = true;
         return true;
     }
@@ -65,11 +60,65 @@ export class PortaEscape extends Objeto {
             return false;
         }
 
-        if (!ferramenta.usar()) {
+        this.acaoOk = true;
+        return true;
+    }
+}
+
+// ---------- NOVOS OBJETOS ----------
+
+// Usado no Centro de Controle com cartao_acesso
+export class TerminalEmergencia extends Objeto {
+    constructor() {
+        super(
+            "terminal_emergencia",
+            "Um terminal de controle mostra vários alertas críticos, mas está bloqueado.",
+            "O terminal exibe: 'PROTOCOLO DE EVACUAÇÃO AUTORIZADO'. As rotas de escape foram liberadas."
+        );
+    }
+
+    usar(ferramenta) {
+        validate(ferramenta, Ferramenta);
+
+        if (!(ferramenta instanceof CartaoAcesso)) {
             return false;
         }
 
         this.acaoOk = true;
         return true;
+    }
+}
+
+// Lore no Dormitório
+export class DiarioTripulante extends Objeto {
+    constructor() {
+        super(
+            "diario_tripulante",
+            "Um diário surrado repousa sobre uma das camas.",
+            "As últimas páginas descrevem tentativas de restaurar energia e escapar pela porta de segurança."
+        );
+    }
+
+    usar(ferramenta) {
+        // Não precisa de ferramenta, sempre retorna false para uso “mecânico”.
+        validate(ferramenta, Ferramenta);
+        return false;
+    }
+}
+
+// Objeto extra para compor o cenário
+export class ArmarioEquipamentos extends Objeto {
+    constructor() {
+        super(
+            "armario_equipamentos",
+            "Um armário metálico trancado, com marcas de uso intenso.",
+            "O armário continua trancado. Parece que o mecanismo interno está danificado."
+        );
+    }
+
+    usar(ferramenta) {
+        validate(ferramenta, Ferramenta);
+        // Por enquanto nenhum equipamento abre esse armário
+        return false;
     }
 }

@@ -5,15 +5,17 @@ export class Lanterna extends Ferramenta {
 
     constructor() {
         super("lanterna");
-        this.#carga = 3; // quantidade máxima de usos
+        this.#carga = 3;
     }
 
     usar() {
-        if (this.#carga <= 0) {
-            return false;
-        }
-        this.#carga = this.#carga - 1;
+        if (this.#carga <= 0) return false;
+        this.#carga--;
         return true;
+    }
+
+    get carga() {
+        return this.#carga;
     }
 }
 
@@ -28,14 +30,26 @@ export class CartaoAcesso extends Ferramenta {
 
     constructor() {
         super("cartao_acesso");
-        this.#usos = 2; // pode abrir a porta algumas vezes
+        this.#usos = 2;
     }
 
     usar() {
-        if (this.#usos <= 0) {
-            return false;
-        }
-        this.#usos = this.#usos - 1;
+        if (this.#usos <= 0) return false;
+        this.#usos--;
+        return true;
+    }
+
+    get usosRestantes() {
+        return this.#usos;
+    }
+}
+
+export class Bomba extends Ferramenta {
+    constructor() {
+        super("bomba");
+    }
+
+    usar() {
         return true;
     }
 }
