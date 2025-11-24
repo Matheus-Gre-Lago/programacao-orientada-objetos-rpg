@@ -2,10 +2,12 @@ import {validate} from "bycontract";
 import promptsync from 'prompt-sync';
 const prompt = promptsync({sigint: true});
 
+// Representa qualquer ferramenta que o jogador pode carregar e usar 
 export class Ferramenta {
 	#nome;
 
 	constructor(nome) {
+        // Garante que o nome sempre seja string 
         validate(nome,"String");
 		this.#nome = nome;
 	}
@@ -14,40 +16,49 @@ export class Ferramenta {
 		return this.#nome;
 	}
 	
+	// Por padrão, "usar" uma ferramenta só retorna true.
+	// As subclasses podem sobrescrever esse comportamento.
 	usar() {
 		return true;
 	}
 }
 
+// Mochila é o "inventário" do jogador, onde as ferramentas ficam guardadas
 export class Mochila{
 	#ferramentas;
 
 	constructor(){
+		// Começa com a mochila vazia
 		this.#ferramentas = [];
 	}
 
+	// Guarda uma ferramenta na mochila
 	guarda(ferramenta){
 		validate(ferramenta,Ferramenta);
 		this.#ferramentas.push(ferramenta);
 	}
 
+	// Retorna a referência da ferramenta com o nome informado (não remove da mochila)
 	pega(nomeFerramenta){
 		validate(arguments,["String"]);
 		let ferramenta = this.#ferramentas.find(f => f.nome === nomeFerramenta);
 		return ferramenta;
 	}
 
+	// Verifica se a mochila possui uma ferramenta com aquele nome
 	tem(nomeFerramenta){
 		validate(arguments,["String"]);
 		return this.#ferramentas.some(f => f.nome === nomeFerramenta);
 	}
 
+	// Retorna uma string com a lista de nomes das ferramentas, separadas por vírgula
 	inventario(){
 		return this.#ferramentas.map(obj => obj.nome).join(", ");
 	}
 }
 
 
+// Objeto é qualquer coisa do cenário com a qual o jogador pode interagir 
 export class Objeto {
 	#nome;
     #descricaoAntesAcao;
@@ -55,10 +66,12 @@ export class Objeto {
     #acaoOk;
     	
 	constructor(nome,descricaoAntesAcao, descricaoDepoisAcao) {
+		// Nome e as descrições antes/depois de interagir
 		validate(arguments,["String","String","String"]);
 		this.#nome = nome;
 		this.#descricaoAntesAcao = descricaoAntesAcao;
 		this.#descricaoDepoisAcao = descricaoDepoisAcao;
+		// Começa como "não resolvido"
 		this.#acaoOk = false;
 	}
 	
@@ -75,6 +88,7 @@ export class Objeto {
 		this.#acaoOk = acaoOk;
 	}
 
+	// A descrição que será mostrada depende se o objeto já foi "resolvido" ou não
 	get descricao() {
 		if (!this.acaoOk) {
 			return this.#descricaoAntesAcao;
@@ -83,10 +97,12 @@ export class Objeto {
 		}
 	}
 
+	// Método genérico de uso – cada objeto (Painel, Porta, etc.) implementa sua lógica
 	usa(ferramenta,objeto){
 	}
 }
 
+// Sala é um "ambiente" do jogo: tem objetos, ferramentas e portas para outras salas
 export class Sala {
 	#nome;
 	#objetos;
@@ -95,18 +111,18 @@ export class Sala {
 	#engine;
 	
 	constructor(nome,engine) {
+		// Cada sala tem um nome e uma referência para a Engine 
 		validate(arguments,["String",Engine]);
 		this.#nome = nome;
-		this.#objetos = new Map();
-		this.#ferramentas = new Map();
-		this.#portas = new Map();
-		this.#engine = engine;
+		this.#objetos = new Map();      
+		this.#ferramentas = new Map();  
+		this.#portas = new Map();       
+		this.#engine = engine;          
 	}
 
 	get nome() {
 		return this.#nome;
 	}
-	
 	
 	get objetos() {
 		return this.#objetos;
@@ -124,21 +140,25 @@ export class Sala {
 		return this.#engine;
 	}
 	
+	// Retorna uma lista textual dos objetos disponíveis nessa sala
 	objetosDisponiveis(){
 		let arrObjs = [...this.#objetos.values()];
     	return arrObjs.map(obj=>obj.nome+":"+obj.descricao);
 	}
 
+	// Lista o nome das ferramentas que estão largadas na sala (antes de pegar)
 	ferramentasDisponiveis(){
 		let arrFer = [...this.#ferramentas.values()];
     	return arrFer.map(f=>f.nome);		
 	}
 	
+	// Lista o nome das salas acessíveis pelas portas desta sala
 	portasDisponiveis(){
 		let arrPortas = [...this.#portas.values()];
     	return arrPortas.map(sala=>sala.nome);
 	}
 	
+	// Tenta pegar uma ferramenta da sala e colocar na mochila do jogador
 	pega(nomeFerramenta) {
 		validate(nomeFerramenta,"String");
 		let ferramenta = this.#ferramentas.get(nomeFerramenta);
@@ -151,11 +171,13 @@ export class Sala {
 		}
 	}
 
+	// Troca o jogador de sala, se existir uma porta com esse nome
 	sai(porta) {
 		validate(porta,"String");
 		return this.#portas.get(porta);
 	}
 
+	// Monta o textinho padrão mostrado quando o jogador entra na sala
 	textoDescricao() {
 		let descricao = "Você está no "+this.nome+"\n";
         if (this.objetos.size == 0){
@@ -172,12 +194,14 @@ export class Sala {
 		return descricao;
 	}
 
+	// Cada sala concreta decide como lida com o comando "usa"
 	usa(ferramenta,objeto){
 		return false;
 	}
 }
 
 
+// Engine é o "cérebro" do jogo: controla loop principal, estado atual e fim de jogo
 export class Engine{
 	#mochila;
 	#salaCorrente;
@@ -190,10 +214,11 @@ export class Engine{
 		this.#salaCorrente = null;
 		this.#fim = false;
 
-		// flags de derrota
+		// Flags de estado de fim de jogo
 		this.#derrota = false;
 		this.#mensagemDerrota = "";
 
+		// Quem herda de Engine deve sobrescrever criaCenario()
 		this.criaCenario();
 	}
 
@@ -210,16 +235,19 @@ export class Engine{
 		this.#salaCorrente = sala;
 	}
 
+	// Marca o jogo como encerrado (usado na vitória também)
 	indicaFimDeJogo(){
 		this.#fim = true;
 	}
 
+	// Marca fim de jogo por derrota e guarda a mensagem
 	indicaDerrota(mensagem) {
 		this.#fim = true;
 		this.#derrota = true;
 		this.#mensagemDerrota = mensagem || "";
 	}
 
+	// Menu de ajuda simples para o jogador lembrar dos comandos
 	mostraAjuda() {
 		console.log("===== AJUDA =====");
 		console.log("Comandos disponíveis:");
@@ -228,16 +256,18 @@ export class Engine{
 		console.log('- sai <nome_da_sala>         -> sai pela porta para outra sala');
 		console.log('- inventario                 -> mostra o que está na sua mochila');
 		console.log('- ajuda / help               -> mostra este menu de ajuda');
-		console.log('- fim                        -> encerra o jogo\n');
+		console.log('- fim                        -> encerra o jogo');
 		console.log("Exemplos:");
 		console.log('  pega lanterna');
 		console.log('  usa lanterna painel_eletrico');
 		console.log('  sai Corredor_Escuro');
-		console.log("=================\n");
+		console.log("=================");
 	}
 
+	// A subclasse (Jogo) é que monta as salas e conexões aqui
 	criaCenario(){}
 
+	// Loop principal do jogo: lê comando, interpreta e reage
 	joga() {
 		let novaSala = null;
 		let acao = "";
@@ -250,6 +280,7 @@ export class Engine{
 			console.log(this.salaCorrente.textoDescricao());
 			acao = prompt("O que voce deseja fazer? ");
 
+			// Evita comando vazio
 			if (!acao || acao.trim().length === 0) {
 				console.log('Você não digitou nenhum comando. Digite "ajuda" para ver as opções.');
 				continue;
@@ -260,6 +291,7 @@ export class Engine{
 
 			switch (comando) {
 			case "fim":
+				// Fecha o jogo na marra
 				this.#fim = true;
 				break;
 
@@ -269,6 +301,7 @@ export class Engine{
 				break;
 
 			case "pega":
+				// Espera algo como: pega lanterna
 				if (tokens.length < 2) {
 					console.log('Uso correto: pega <nome_da_ferramenta>. Ex: pega lanterna');
 					break;
@@ -281,6 +314,7 @@ export class Engine{
 				break;
 
 			case "inventario":
+				// Mostra o que já está na Mochila
 				const inv = this.#mochila.inventario();
 				if (!inv) {
 					console.log("Sua mochila está vazia.");
@@ -290,6 +324,7 @@ export class Engine{
 				break;
 
 			case "usa":
+				// Espera algo como: usa lanterna painel_eletrico
 				if (tokens.length < 3) {
 					console.log('Uso correto: usa <ferramenta> <objeto>. Ex: usa lanterna painel_eletrico');
 					break;
@@ -299,6 +334,7 @@ export class Engine{
 				const alvo = tokens[2];
 
 				// --------- TRATAMENTO GLOBAL DA BOMBA ---------
+				// A bomba é um caso especial: usar em qualquer lugar = derrota imediata
 				if (nomeFerramenta === "bomba") {
 					if (!this.#mochila.tem("bomba")) {
 						console.log('Você tenta usar uma bomba, mas não tem nenhuma na mochila.');
@@ -309,22 +345,24 @@ export class Engine{
 					console.log("Em poucos segundos, uma explosão toma conta do ambiente!");
 					this.indicaDerrota("Você foi explodido pela própria bomba.");
 
-					// não chama salaCorrente.usa, o jogo acaba aqui
 					break;
 				}
 
 				// --------- FLUXO NORMAL PARA OUTRAS FERRAMENTAS ---------
+				// Delega a lógica para a sala atual decidir o que acontece
 				if (this.salaCorrente.usa(nomeFerramenta, alvo)) {
 					console.log("Feito !!");
 					if (this.#fim === true) {
-						// aqui pode ser vitória (ex: porta_escape)
+						// Se alguma sala marcou o fim de jogo, consideramos vitória aqui
 						console.log("Parabens, voce venceu!");
 					}
 				} else {
 					console.log("Não é possível usar " + nomeFerramenta + " sobre " + alvo + " nesta sala");
 				}
 				break;
+
 			case "sai":
+				// Espera algo como: sai Sala_de_Seguranca
 				if (tokens.length < 2) {
 					console.log('Uso correto: sai <nome_da_sala>. Ex: sai Hall_Principal');
 					break;
@@ -344,6 +382,7 @@ export class Engine{
 			}
 		}
 
+		// Ao sair do loop principal, mostramos o desfecho
 		if (this.#derrota) {
 			console.log("\n=== FIM DE JOGO ===");
 			console.log("Você foi derrotado!");

@@ -3,17 +3,21 @@ import { Sala, Engine } from "./Basicas.js";
 import { Lanterna, KitFusivel, CartaoAcesso, Bomba } from "./Ferramentas.js";
 import { PainelEletrico, GeradorPrincipal, PortaEscape, TerminalEmergencia, DiarioTripulante, ArmarioEquipamentos } from "./Objetos.js";
 
+// Sala inicial: onde o jogador nasce e tem acesso às principais rotas
 export class HallPrincipal extends Sala {
     constructor(engine) {
         validate(engine, Engine);
         super("Hall_Principal", engine);
 
+        // Lanterna já disponível logo de cara
         const lanterna = new Lanterna();
         this.ferramentas.set(lanterna.nome, lanterna);
 
+        // Bomba opcional (risco de derrota direta)
         const bomba = new Bomba();
         this.ferramentas.set(bomba.nome, bomba);
 
+        // Armário só para compor cenário
         const armario = new ArmarioEquipamentos();
         this.objetos.set(armario.nome, armario);
     }
@@ -42,6 +46,7 @@ export class HallPrincipal extends Sala {
     }
 }
 
+// Corredor escuro – onde o jogador precisa da lanterna para enxergar o painel
 export class CorredorEscuro extends Sala {
     constructor(engine) {
         validate(engine, Engine);
@@ -62,11 +67,13 @@ export class CorredorEscuro extends Sala {
         const ferr = this.engine.mochila.pega(ferramenta);
         const painel = this.objetos.get("painel_eletrico");
 
+        // Lógica especial para lanterna, por conta da carga e condição de derrota
         if (ferr instanceof Lanterna) {
 
             const consumiu = ferr.usar();
 
             if (!consumiu) {
+                // Se tentar usar a lanterna sem carga e ainda não resolveu o painel, derrota
                 if (!painel.acaoOk) {
                     console.log("A lanterna pisca algumas vezes e apaga de vez. Você fica completamente no escuro.");
                     this.engine.indicaDerrota(
@@ -78,6 +85,7 @@ export class CorredorEscuro extends Sala {
                 return false;
             }
 
+            // Se o objeto que o jogador passou nem existe aqui, só consome carga e dá feedback genérico
             if (!this.objetos.has(objeto)) {
                 console.log(`Você ilumina "${objeto}", mas não encontra nada de útil.`);
                 console.log(`Carga restante da lanterna: ${ferr.carga}.`);
@@ -92,6 +100,7 @@ export class CorredorEscuro extends Sala {
                     console.log("Você ilumina o painel e finalmente consegue enxergar os detalhes internos.");
                     console.log(`Carga restante da lanterna: ${ferr.carga}.`);
 
+                    // Ao resolver o painel, o kit de fusível aparece
                     const kit = new KitFusivel();
                     if (!this.ferramentas.has(kit.nome)) {
                         this.ferramentas.set(kit.nome, kit);
@@ -105,6 +114,7 @@ export class CorredorEscuro extends Sala {
                 }
             }
 
+            // Qualquer outro objeto iluminado
             if (!usouNoObjeto) {
                 console.log(`Você ilumina "${objeto}", mas nada acontece de relevante.`);
             }
@@ -112,6 +122,7 @@ export class CorredorEscuro extends Sala {
             return usouNoObjeto;
         }
 
+        // Se não for lanterna, cai na lógica padrão
         if (!this.objetos.has(objeto)) {
             console.log(`Não há nenhum objeto "${objeto}" neste corredor.`);
             return false;
@@ -128,6 +139,7 @@ export class CorredorEscuro extends Sala {
     }
 }
 
+// Sala de manutenção – onde o jogador liga o gerador e pega o cartão
 export class SalaManutencao extends Sala {
     constructor(engine) {
         validate(engine, Engine);
@@ -156,8 +168,10 @@ export class SalaManutencao extends Sala {
         const usou = obj.usar(ferr);
 
         if (obj instanceof GeradorPrincipal && usou) {
+            // Marca a flag global de energia restaurada
             this.engine.energiaRestaurada = true;
 
+            // Libera o cartão de acesso na sala
             const cartao = new CartaoAcesso();
             if (!this.ferramentas.has(cartao.nome)) {
                 this.ferramentas.set(cartao.nome, cartao);
@@ -171,6 +185,7 @@ export class SalaManutencao extends Sala {
     }
 }
 
+// Sala de segurança – aqui fica a porta final de escape
 export class SalaSeguranca extends Sala {
     constructor(engine) {
         validate(engine, Engine);
@@ -190,6 +205,7 @@ export class SalaSeguranca extends Sala {
 
         const ferr = this.engine.mochila.pega(ferramenta);
 
+        // Lanterna aqui é só decorativa (ilumina, mas não muda estados importantes)
         if (ferr instanceof Lanterna) {
             const consumiu = ferr.usar();
 
@@ -215,6 +231,7 @@ export class SalaSeguranca extends Sala {
 
         const obj = this.objetos.get(objeto);
 
+        // Lógica principal da porta: precisa de cartão + energia + autorização
         if (ferr instanceof CartaoAcesso) {
 
             if (!this.engine.energiaRestaurada) {
@@ -231,6 +248,7 @@ export class SalaSeguranca extends Sala {
 
             if (obj instanceof PortaEscape && usouCartao) {
                 console.log("O leitor reconhece o cartão. A porta de escape se abre.");
+                // Marca fim de jogo (vitória)
                 this.engine.indicaFimDeJogo();
                 return true;
             }
@@ -239,6 +257,7 @@ export class SalaSeguranca extends Sala {
             return false;
         }
 
+        // Qualquer outra ferramenta que não seja lanterna ou cartão
         const usou = obj.usar(ferr);
         if (!usou) {
             console.log(`Você tenta usar "${ferramenta}" em "${objeto}", mas nada acontece.`);
@@ -273,11 +292,13 @@ export class CentroControle extends Sala {
         const obj = this.objetos.get(objeto);
         const ferr = this.engine.mochila.pega(ferramenta);
 
+        // Aqui é o ponto onde liberamos o protocolo de evacuação
         if (obj instanceof TerminalEmergencia && ferr instanceof CartaoAcesso) {
 
             const usou = obj.usar(ferr);
 
             if (usou) {
+                // Seta flag global indicando que agora a porta pode ser usada na Sala de Segurança
                 this.engine.autorizacaoEscape = true;
                 console.log("Você usa o cartão no terminal de emergência.");
                 console.log("O sistema exibe: 'PROTOCOLO DE EVACUAÇÃO AUTORIZADO'. As rotas de escape foram liberadas.");
